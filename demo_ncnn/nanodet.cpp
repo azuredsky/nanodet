@@ -46,10 +46,10 @@ NanoDet* NanoDet::detector = nullptr;
 NanoDet::NanoDet(const char* param, const char* bin, bool useGPU)
 {
     this->Net = new ncnn::Net();
-    // opt ��Ҫ�ڼ���ǰ����
+    // opt 
     this->hasGPU = ncnn::get_gpu_count() > 0;
-    this->Net->opt.use_vulkan_compute = this->hasGPU && useGPU;  // gpu
-    this->Net->opt.use_fp16_arithmetic = true;  // fp16�������
+    this->Net->opt.use_vulkan_compute = this->hasGPU && useGPU;
+    this->Net->opt.use_fp16_arithmetic = true;
     this->Net->load_param(param);
     this->Net->load_model(bin);
 }
@@ -67,8 +67,8 @@ void NanoDet::preprocess(cv::Mat& image, ncnn::Mat& in)
     in = ncnn::Mat::from_pixels(image.data, ncnn::Mat::PIXEL_BGR, img_w, img_h);
     //in = ncnn::Mat::from_pixels_resize(image.data, ncnn::Mat::PIXEL_BGR, img_w, img_h, this->input_width, this->input_height);
 
-    const float mean_vals[3] = { 104.04f, 113.9f, 119.8f };
-    const float norm_vals[3] = { 0.013569f, 0.014312f, 0.014106f };
+    const float mean_vals[3] = { 103.53f, 116.28f, 123.675f };
+    const float norm_vals[3] = { 0.017429f, 0.017507f, 0.017125f };
     in.substract_mean_normalize(mean_vals, norm_vals);
 }
 
