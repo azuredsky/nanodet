@@ -2,9 +2,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
-#include <ncnn/net.h>
+#include <net.h>
 #include "nanodet.h"
-#include <ncnn/benchmark.h>
+#include <benchmark.h>
 
 struct object_rect {
     int x;
@@ -195,7 +195,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
         //fprintf(stderr, "%d = %.5f at %.2f %.2f %.2f %.2f\n", bbox.label, bbox.score,
         //    bbox.x1, bbox.y1, bbox.x2, bbox.y2);
 
-        cv::rectangle(image, cv::Rect(cv::Point((bbox.x1 - effect_roi.x) * width_ratio, (bbox.y1 - effect_roi.y) * height_ratio), 
+        cv::rectangle(image, cv::Rect(cv::Point((bbox.x1 - effect_roi.x) * width_ratio, (bbox.y1 - effect_roi.y) * height_ratio),
                                       cv::Point((bbox.x2 - effect_roi.x) * width_ratio, (bbox.y2 - effect_roi.y) * height_ratio)), color);
 
         char text[256];
@@ -226,8 +226,10 @@ int image_demo(NanoDet &detector, const char* imagepath)
 {
     // const char* imagepath = "D:/Dataset/coco/val2017/*.jpg";
 
-    std::vector<std::string> filenames;
+    std::vector<cv::String> filenames;
     cv::glob(imagepath, filenames, false);
+    int height = detector.input_size[0];
+    int width = detector.input_size[1];
 
     for (auto img_name : filenames)
     {
@@ -239,7 +241,7 @@ int image_demo(NanoDet &detector, const char* imagepath)
         }
         object_rect effect_roi;
         cv::Mat resized_img;
-        resize_uniform(image, resized_img, cv::Size(320, 320), effect_roi);
+        resize_uniform(image, resized_img, cv::Size(width, height), effect_roi);
         auto results = detector.detect(resized_img, 0.4, 0.5);
         draw_bboxes(image, results, effect_roi);
         cv::waitKey(0);
@@ -252,13 +254,15 @@ int webcam_demo(NanoDet& detector, int cam_id)
 {
     cv::Mat image;
     cv::VideoCapture cap(cam_id);
+    int height = detector.input_size[0];
+    int width = detector.input_size[1];
 
     while (true)
     {
         cap >> image;
         object_rect effect_roi;
         cv::Mat resized_img;
-        resize_uniform(image, resized_img, cv::Size(320, 320), effect_roi);
+        resize_uniform(image, resized_img, cv::Size(width, height), effect_roi);
         auto results = detector.detect(resized_img, 0.4, 0.5);
         draw_bboxes(image, results, effect_roi);
         cv::waitKey(1);
@@ -270,13 +274,15 @@ int video_demo(NanoDet& detector, const char* path)
 {
     cv::Mat image;
     cv::VideoCapture cap(path);
+    int height = detector.input_size[0];
+    int width = detector.input_size[1];
 
     while (true)
     {
         cap >> image;
         object_rect effect_roi;
         cv::Mat resized_img;
-        resize_uniform(image, resized_img, cv::Size(320, 320), effect_roi);
+        resize_uniform(image, resized_img, cv::Size(width, height), effect_roi);
         auto results = detector.detect(resized_img, 0.4, 0.5);
         draw_bboxes(image, results, effect_roi);
         cv::waitKey(1);
@@ -288,28 +294,25 @@ int benchmark(NanoDet& detector)
 {
     int loop_num = 100;
     int warm_up = 8;
+    int height = detector.input_size[0];
+    int width = detector.input_size[1];
 
     double time_min = DBL_MAX;
     double time_max = -DBL_MAX;
     double time_avg = 0;
-    ncnn::Mat input = ncnn::Mat(320, 320, 3);
+    ncnn::Mat input = ncnn::Mat(height, width, 3);
     input.fill(0.01f);
     for (int i = 0; i < warm_up + loop_num; i++)
     {
         double start = ncnn::get_current_time();
         ncnn::Extractor ex = detector.Net->create_extractor();
-        ex.input("input.1", input);
-        for (const auto& head_info : detector.heads_info)
-        {
-            ncnn::Mat dis_pred;
-            ncnn::Mat cls_pred;
-            ex.extract(head_info.dis_layer.c_str(), dis_pred);
-            ex.extract(head_info.cls_layer.c_str(), cls_pred); 
-        }
+        ex.input("data", input);
+        ncnn::Mat preds;
+        ex.extract("output", preds);
         double end = ncnn::get_current_time();
 
         double time = end - start;
-        if (i >= warm_up) 
+        if (i >= warm_up)
         {
             time_min = (std::min)(time_min, time);
             time_max = (std::max)(time_max, time);
@@ -329,7 +332,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "usage: %s [mode] [path]. \n For webcam mode=0, path is cam id; \n For image demo, mode=1, path=xxx/xxx/*.jpg; \n For video, mode=2; \n For benchmark, mode=3 path=0.\n", argv[0]);
         return -1;
     }
-    NanoDet detector = NanoDet("./nanodet_m.param", "./nanodet_m.bin", true);
+    NanoDet detector = NanoDet("./nanodet.param", "./nanodet.bin", true);
     int mode = atoi(argv[1]);
     switch (mode)
     {
@@ -358,4 +361,3 @@ int main(int argc, char** argv)
         }
     }
 }
-

@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-#include <ncnn/gpu.h>
+#include <gpu.h>
 #include <android/asset_manager_jni.h>
 #include <android/log.h>
 #include "YoloV5.h"
@@ -31,7 +31,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_rangi_nanodet_NanoDet_init(JNIEnv *env, jclass, jobject assetManager, jboolean useGPU) {
     if (NanoDet::detector == nullptr) {
         AAssetManager *mgr = AAssetManager_fromJava(env, assetManager);
-        NanoDet::detector = new NanoDet(mgr, "nanodet_m.param", "nanodet_m.bin", useGPU);
+        NanoDet::detector = new NanoDet(mgr, "nanodet.param", "nanodet.bin", useGPU);
     }
 }
 
@@ -107,6 +107,3 @@ Java_com_rangi_nanodet_YOLOv4_detect(JNIEnv *env, jclass, jobject image, jdouble
     }
     return ret;
 }
-
-
-

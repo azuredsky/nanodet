@@ -4,10 +4,10 @@
 //
 
 #ifndef NANODET_H
-#define NAMODET_H
+#define NANODET_H
 
 #include <opencv2/core/core.hpp>
-#include "ncnn/net.h"
+#include <net.h>
 
 typedef struct HeadInfo
 {
@@ -16,7 +16,14 @@ typedef struct HeadInfo
     int stride;
 };
 
-typedef struct BoxInfo 
+struct CenterPrior
+{
+    int x;
+    int y;
+    int stride;
+};
+
+typedef struct BoxInfo
 {
     float x1;
     float y1;
@@ -36,13 +43,11 @@ public:
     static NanoDet* detector;
     ncnn::Net* Net;
     static bool hasGPU;
-
-    std::vector<HeadInfo> heads_info{
-        // cls_pred|dis_pred|stride
-            {"792", "795",    8},
-            {"814", "817",   16},
-            {"836", "839",   32},
-    };
+    // modify these parameters to the same with your config if you want to use your own model
+    int input_size[2] = {416, 416}; // input height and width
+    int num_class = 80; // number of classes. 80 for COCO
+    int reg_max = 7; // `reg_max` set in the training config. Default: 7.
+    std::vector<int> strides = { 8, 16, 32, 64 }; // strides of the multi-level feature.
 
     std::vector<BoxInfo> detect(cv::Mat image, float score_threshold, float nms_threshold);
 
@@ -57,12 +62,9 @@ public:
                                     "hair drier", "toothbrush" };
 private:
     void preprocess(cv::Mat& image, ncnn::Mat& in);
-    void decode_infer(ncnn::Mat& cls_pred, ncnn::Mat& dis_pred, int stride, float threshold, std::vector<std::vector<BoxInfo>>& results);
+    void decode_infer(ncnn::Mat& feats, std::vector<CenterPrior>& center_priors, float threshold, std::vector<std::vector<BoxInfo>>& results);
     BoxInfo disPred2Bbox(const float*& dfl_det, int label, float score, int x, int y, int stride);
     static void nms(std::vector<BoxInfo>& result, float nms_threshold);
-    int input_size = 320;
-    int num_class = 80;
-    int reg_max = 7;
 
 };
 
